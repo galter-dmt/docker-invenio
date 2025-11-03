@@ -39,6 +39,7 @@ RUN mkdir -p \
 WORKDIR ${WORKING_DIR}/src
 
 # Set folder permissions
+ENV INVENIO_USER_ID=1000
 RUN chgrp -R 0 ${WORKING_DIR} && \
     chmod -R g=u ${WORKING_DIR} && \
     useradd invenio --uid ${INVENIO_USER_ID} --gid 0 && \
