@@ -1,0 +1,100 @@
+# Based on: https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions
+
+on:
+  schedule:
+    - cron:  "0 3 * * 2"  # at 03:00 on Tuesday
+  push:
+    branches: ['master']
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'
+        required: false
+        default: 'Manual trigger'
+      version:
+        description: 'Semver'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-publish-debian:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        node-version: ["22"]
+        os-version: ["bookworm"]
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v5
+        # with:
+        #   fetch-depth: 0
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: metadata
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f  # v5.8.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/invenio-python-${{ matrix.python-version }}-node-${{ matrix.node-version }}-debian-${{ matrix.os-version }}
+          tags: |
+            type=schedule,pattern={{date 'YYYY.MM.DD'}}
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83  # v6.18.0
+        with:
+          context: ./debian/
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+
+      # Legacy
+      # # rebuild and publish `tags`
+      # - name: Get latest tag starting with ${{ matrix.tag }}
+      #   run: echo "TAG=$(git tag -l --sort -version:refname | head -n 1 | grep -o '^${{ matrix.tag }}.*')" >> $GITHUB_ENV
+
+      # - name: Extract semver
+      #   run: |
+      #     if [[ "${{ env.TAG }}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+      #       # BASH_REMATCH contains the results of the most recent pattern match using the =~ operator
+      #       MAJOR=${BASH_REMATCH[1]}
+      #       MINOR=${BASH_REMATCH[2]}
+      #       PATCH=${BASH_REMATCH[3]}
+      #       VERSION=$MAJOR.$MINOR.$PATCH
+      #       echo "SemVer: major $MAJOR, minor $MINOR, patch: $PATCH, version: $VERSION"
+      #       echo "MAJOR=$MAJOR" >> $GITHUB_ENV
+      #       echo "MINOR=$MINOR" >> $GITHUB_ENV
+      #       echo "PATCH=$PATCH" >> $GITHUB_ENV
+      #       echo "VERSION=$MAJOR.$MINOR.$PATCH" >> $GITHUB_ENV
+      #     else
+      #       echo "Error: tag ${{ env.TAG }} format is incorrect. Must be in the form v<major>.<minor>.<patch>." >&2
+      #       exit 1
+      #     fi
+
+      # - name: Checkout tag ${{ env.TAG }}
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ref: ${{ env.TAG }}
+
+
+      # - name: Publish AlmaLinux tags ${{ env.TAG }}
+      #   uses: ./.github/actions/publish-almalinux
+      #   with:
+      #     registry-username: ${{ secrets.CERN_REGISTRY_USERNAME }}
+      #     registry-password: ${{ secrets.CERN_REGISTRY_PASSWORD }}
+      #     docker-tags: ${{ steps.meta-git.outputs.tags }}
+      #     docker-labels: ${{ steps.meta-git.outputs.labels }}
