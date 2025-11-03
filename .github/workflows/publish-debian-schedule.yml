@@ -1,9 +1,61 @@
 # Based on: https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions
 
 on:
+  schedule:
+    - cron:  "0 3 * * 2"  # at 03:00 on Tuesday
+  push:
+    branches: ['master']
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       reason:
         description: 'Reason'
         required: false
         default: 'Manual trigger'
+      version:
+        description: 'Semver'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-publish-debian:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        node-version: ["22"]
+        os-version: ["bookworm"]
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v5
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: metadata
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f  # v5.8.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/invenio-python-${{ matrix.python-version }}-node-${{ matrix.node-version }}-debian-${{ matrix.os-version }}
+          tags: |
+            type=schedule,pattern={{date 'YYYY.MM.DD'}}
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83  # v6.18.0
+        with:
+          context: ./debian/
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
