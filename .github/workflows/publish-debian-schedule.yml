@@ -30,7 +30,7 @@ jobs:
       matrix:
         python-version: ["3.11"]
         node-version: ["22"]
-        os-version: ["bookworm"]
+        os-version: ["trixie"]
 
     steps:
       - name: Checkout this repository
@@ -59,3 +59,7 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            PYTHON_VERSION=${{ matrix.python-version }}
+            NODE_VERSION=${{ matrix.node-version }}
+            OS_VERSION=${{ matrix.os-version }}
