@@ -91,4 +91,3 @@ jobs:
           registry-password: ${{ secrets.CERN_REGISTRY_PASSWORD }}
           docker-tags: ${{ steps.meta-git.outputs.tags }}
           docker-labels: ${{ steps.meta-git.outputs.labels }}
-
