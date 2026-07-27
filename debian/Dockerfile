@@ -1,22 +1,28 @@
 # syntax=docker/dockerfile:1
 
-#
-# Copyright (C) 2026 Northwestern University.
-# Copyright (C) 2026 Frontmatter.
-# Copyright (C) 2026 KTH Royal Institute of Technology.
-#
-# Invenio is free software; you can redistribute it and/or modify it
-# under the terms of the MIT License; see LICENSE file for more details.
+# SPDX-FileCopyrightText: 2026 Northwestern University.
+# SPDX-FileCopyrightText: 2026 Frontmatter.
+# SPDX-FileCopyrightText: 2026 KTH Royal Institute of Technology.
+# SPDX-License-Identifier: MIT
 #
 
 ARG BUILD_PLATFORM=linux/amd64
 ARG PYTHON_VERSION=3.14
 ARG OS_VERSION=trixie
 ARG NODE_VERSION=24
+ARG PNPM_VERSION=latest-10
+ARG INVENIO_WEBPACKEXT_NPM_PKG_CLS=pynpm:PNPMPackage
 
 FROM --platform=${BUILD_PLATFORM} python:${PYTHON_VERSION}-${OS_VERSION}
 
 LABEL org.opencontainers.image.source=https://github.com/inveniosoftware/docker-invenio
+
+# ARGs declared before FROM are only global defaults. Redeclare build args in
+# the stage where they are used so passed values are in scope:
+# https://docs.docker.com/build/building/variables/#scoping
+ARG NODE_VERSION
+ARG PNPM_VERSION
+ARG INVENIO_WEBPACKEXT_NPM_PKG_CLS
 
 ENV \
     WORKING_DIR=/opt/invenio \
@@ -74,10 +80,9 @@ RUN \
         fonts-dejavu \
         locales \
         nodejs \
-        npm \
     && \
     # Install pnpm
-    npm install -g pnpm@latest-10
+    npm install -g pnpm@${PNPM_VERSION}
 
 # Setup uv
 # From https://docs.astral.sh/uv/guides/integration/docker/
