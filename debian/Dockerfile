@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # SPDX-FileCopyrightText: 2026 Northwestern University.
 # SPDX-FileCopyrightText: 2026 Frontmatter.
 # SPDX-FileCopyrightText: 2026 KTH Royal Institute of Technology.
